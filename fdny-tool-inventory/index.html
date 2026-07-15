@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FDNY Apparatus Tool Inventory & Rig Check</title>
+<meta name="description" content="Track engine and ladder company tools by riding position and compartment, run shift rig-checks with comments and photos, manage the firehouse tool room, and sync to inventory/gear systems." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#0B0E13; --bg-elev:#12171F; --bg-elev-2:#1A212C; --bg-elev-3:#232C3A;
+  --line:#222B39; --line-strong:#33404F;
+  --text:#E7ECF3; --text-dim:#93A0B4; --text-faint:#5D6B7E;
+  --red:#E4272E; --red-dk:#A2141B; --amber:#F5A623; --green:#35C46B; --cyan:#2FC6D4; --violet:#8B7BF0; --gold:#E9C46A;
+  --radius:10px; --radius-sm:6px;
+  --font-display:'Oswald','Arial Narrow',system-ui,sans-serif;
+  --font-body:'Inter',system-ui,-apple-system,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(1200px 600px at 82% -12%,rgba(228,39,46,.07),transparent 60%),var(--bg);
+  color:var(--text);font-family:var(--font-body);-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.55}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:8px}
+a{color:var(--cyan)}
+.eyebrow{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.18em;font-weight:600;font-size:11px;color:var(--text-faint)}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.signage{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+
+.app{display:grid;grid-template-columns:250px 1fr;grid-template-rows:auto 1fr;grid-template-areas:"topbar topbar" "nav main";height:100vh}
+.topbar{grid-area:topbar;display:flex;align-items:center;gap:16px;padding:11px 20px;background:linear-gradient(180deg,#10151d,#0c1017);border-bottom:1px solid var(--line)}
+.topbar__emblem{width:42px;height:42px;flex:none}
+.topbar__titles h1{margin:0;font-family:var(--font-display);text-transform:uppercase;letter-spacing:.05em;font-size:18px;font-weight:700}
+.topbar__titles h1 span{color:var(--red)}
+.topbar__sub{font-size:11px;color:var(--text-dim)}
+.topbar__right{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.house-select{display:flex;align-items:center;gap:8px}
+.house-select select{background:var(--bg-elev);border:1px solid var(--line-strong);color:var(--text);border-radius:999px;padding:7px 12px;font:inherit;font-size:12px}
+.tourpill{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-dim);background:var(--bg-elev);border:1px solid var(--line-strong);border-radius:999px;padding:6px 12px}
+.tourpill b{color:var(--amber);font-family:var(--font-mono)}
+
+.nav{grid-area:nav;background:var(--bg-elev);border-right:1px solid var(--line);overflow-y:auto;padding:10px 8px}
+.nav__group{margin:6px 6px 12px}
+.nav__label{font-size:9.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--text-faint);padding:8px 8px 4px}
+.nav a{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:var(--radius-sm);color:var(--text-dim);text-decoration:none;font-size:13.5px;font-weight:500;border:1px solid transparent;margin-bottom:2px}
+.nav a:hover{background:var(--bg-elev-2);color:var(--text)}
+.nav a.on{background:var(--bg-elev-2);color:var(--text);border-color:var(--red)}
+.nav a svg{width:18px;height:18px;flex:none;color:inherit}
+.nav a .badge{margin-left:auto;font-family:var(--font-mono);font-size:10px;color:#fff;background:var(--red);padding:1px 7px;border-radius:999px}
+
+.main{grid-area:main;overflow-y:auto;padding:24px 30px 80px}
+.view{max-width:1120px}
+.page-head h2{margin:0;font-family:var(--font-display);text-transform:uppercase;letter-spacing:.03em;font-size:26px;font-weight:700}
+.page-head p{margin:4px 0 0;color:var(--text-dim);max-width:74ch}
+
+.section{margin-top:24px}
+.section__title{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.section__title h3{margin:0;font-family:var(--font-display);text-transform:uppercase;letter-spacing:.08em;font-size:15px;font-weight:600}
+.section__title .rule{flex:1;height:1px;background:var(--line)}
+.section__title .tag{font-family:var(--font-mono);font-size:11px;color:var(--text-faint)}
+
+.panel{background:var(--bg-elev);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+.panel--pad0{padding:0;overflow:hidden}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+
+.stat{background:var(--bg-elev);border:1px solid var(--line);border-radius:var(--radius);padding:14px 15px;position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent,var(--line-strong))}
+.stat .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);margin-bottom:8px}
+.stat .val{font-family:var(--font-mono);font-weight:700;font-size:28px;line-height:1}
+.stat .val .u{font-size:12px;color:var(--text-dim);margin-left:3px}
+.stat .foot{margin-top:7px;font-size:11px;color:var(--text-dim)}
+
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--bg-elev-2);border:1px solid var(--line-strong);color:var(--text);padding:9px 15px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:500}
+.btn:hover{border-color:var(--red)}
+.btn--red{background:var(--red);border-color:var(--red);color:#fff}.btn--red:hover{background:var(--red-dk)}
+.btn--green{background:var(--green);border-color:var(--green);color:#06210f}
+.btn--ghost{background:transparent}
+.btn--sm{padding:6px 10px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+.pill{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;letter-spacing:.03em;white-space:nowrap}
+.pill--green{background:rgba(53,196,107,.14);color:var(--green)}.pill--amber{background:rgba(245,166,35,.14);color:var(--amber)}
+.pill--red{background:rgba(228,39,46,.16);color:#ff6b70}.pill--cyan{background:rgba(47,198,212,.14);color:var(--cyan)}
+.pill--dim{background:var(--bg-elev-2);color:var(--text-dim)}.pill--violet{background:rgba(139,123,240,.16);color:var(--violet)}
+
+label.fld{display:block;margin-bottom:14px}
+label.fld .k{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);margin-bottom:6px}
+input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--line-strong);color:var(--text);border-radius:var(--radius-sm);padding:9px 11px;font:inherit}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--cyan);outline-offset:1px;border-color:var(--cyan)}
+textarea{min-height:64px;resize:vertical}
+
+.notice{display:flex;gap:11px;align-items:flex-start;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.3);border-radius:var(--radius);padding:12px 15px;margin-bottom:18px;font-size:12.5px;color:var(--text-dim)}
+.notice b{color:var(--amber)}.notice a{color:var(--amber)}
+
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);font-weight:600;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--bg-elev-2)}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover{background:var(--bg-elev-2)}
+.tbl .num{text-align:right;font-family:var(--font-mono)}
+.tbl input,.tbl select{padding:6px 8px}
+
+/* rig tabs */
+.rigtabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.rigtab{display:flex;align-items:center;gap:10px;background:var(--bg-elev);border:1px solid var(--line-strong);border-radius:var(--radius);padding:10px 14px;cursor:pointer}
+.rigtab.on{border-color:var(--red);background:var(--bg-elev-2)}
+.rigtab .rt-name{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.03em;font-weight:600}
+.rigtab .rt-type{font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em}
+
+/* checklist */
+.loc-group{margin-bottom:14px}
+.loc-head{display:flex;align-items:center;gap:10px;padding:8px 4px;margin-bottom:4px}
+.loc-head h4{margin:0;font-family:var(--font-display);text-transform:uppercase;letter-spacing:.05em;font-size:13px;color:var(--cyan)}
+.loc-head .rule{flex:1;height:1px;background:var(--line)}
+.titem{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:7px;background:var(--bg-elev)}
+.titem__main{flex:1;min-width:0}
+.titem__name{font-weight:600}
+.titem__meta{font-size:11px;color:var(--text-faint);font-family:var(--font-mono)}
+.statusbtns{display:flex;gap:4px}
+.sbtn{width:34px;height:32px;border-radius:var(--radius-sm);border:1px solid var(--line-strong);background:var(--bg-elev-2);color:var(--text-dim);cursor:pointer;font-weight:700;font-family:var(--font-mono);font-size:13px}
+.sbtn.on-p{background:var(--green);border-color:var(--green);color:#06210f}
+.sbtn.on-m{background:var(--red);border-color:var(--red);color:#fff}
+.sbtn.on-d{background:var(--amber);border-color:var(--amber);color:#2a1c00}
+.iconbtn{width:32px;height:32px;display:grid;place-items:center;border-radius:var(--radius-sm);border:1px solid var(--line-strong);background:var(--bg-elev-2);color:var(--text-dim);cursor:pointer}
+.iconbtn:hover{border-color:var(--cyan);color:var(--cyan)}
+.iconbtn svg{width:16px;height:16px}
+.titem__note{width:100%;margin-top:8px;display:none}
+.titem.expanded .titem__note{display:block}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.thumb{width:54px;height:54px;border-radius:var(--radius-sm);object-fit:cover;border:1px solid var(--line-strong)}
+.stickybar{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(11,14,19,0),var(--bg) 40%);padding:14px 0 4px;margin-top:8px}
+.progressbar{height:8px;background:var(--bg-elev-2);border-radius:4px;overflow:hidden;margin-bottom:10px}
+.progressbar>i{display:block;height:100%;border-radius:4px;background:var(--green);transition:width .3s}
+
+.rig-card{background:var(--bg-elev);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.rig-card h4{margin:0 0 2px;font-family:var(--font-display);text-transform:uppercase;letter-spacing:.03em;font-size:17px}
+.rig-card .sub{font-size:11px;color:var(--text-faint);margin-bottom:12px}
+.rig-card .barrow{display:flex;align-items:center;gap:10px;margin:10px 0}
+.rig-card .barrow .pct{font-family:var(--font-mono);font-weight:700;min-width:46px}
+
+.disc{display:flex;align-items:flex-start;gap:14px;padding:13px 14px;border-bottom:1px solid var(--line)}
+.disc:last-child{border-bottom:none}
+.disc__dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex:none}
+.disc__body{flex:1;min-width:0}
+.disc__t{font-weight:600}
+.disc__meta{font-size:11px;color:var(--text-faint);font-family:var(--font-mono);margin-top:2px}
+.disc__cmt{font-size:12.5px;color:var(--text-dim);margin-top:6px}
+
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.gcard{background:var(--bg-elev);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.gcard img{width:100%;height:120px;object-fit:cover;display:block;background:var(--bg-elev-2)}
+.gcard .gmeta{padding:9px 11px}
+.gcard .gcap{font-size:12px;font-weight:500}
+.gcard .gsub{font-size:10px;color:var(--text-faint);font-family:var(--font-mono);margin-top:2px}
+
+.q-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px;background:var(--bg-elev)}
+.q-item .qk{flex:1}
+.empty{color:var(--text-dim);text-align:center;padding:40px 20px}
+.filepick{display:none}
+@media (max-width:960px){
+  .app{grid-template-columns:1fr;grid-template-areas:"topbar" "nav" "main";grid-template-rows:auto auto 1fr;height:auto}
+  .nav{display:grid;grid-template-columns:repeat(2,1fr)}
+  .g2,.g3,.g4{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <svg class="topbar__emblem" viewBox="0 0 240 240" aria-label="emblem placeholder">
+      <defs><linearGradient id="st" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F3D27A"/><stop offset="1" stop-color="#C9992F"/></linearGradient>
+      <radialGradient id="cr" cx=".5" cy=".4" r=".75"><stop offset="0" stop-color="#E4272E"/><stop offset="1" stop-color="#A2141B"/></radialGradient></defs>
+      <circle cx="120" cy="120" r="116" fill="#0B0E13"/><circle cx="120" cy="120" r="116" fill="none" stroke="url(#st)" stroke-width="6"/>
+      <g transform="translate(120 120)" stroke="url(#st)" stroke-width="4" stroke-linejoin="round"><path fill="url(#cr)" d="M 0 -88 L 22 -44 L 60 -60 L 44 -22 L 88 0 L 44 22 L 60 60 L 22 44 L 0 88 L -22 44 L -60 60 L -44 22 L -88 0 L -44 -22 L -60 -60 L -22 -44 Z"/></g>
+      <circle cx="120" cy="120" r="30" fill="#0B0E13" stroke="url(#st)" stroke-width="3"/><text x="120" y="128" text-anchor="middle" font-family="Oswald" font-weight="700" font-size="24" fill="#F3D27A">FD</text></svg>
+    <div class="topbar__titles"><h1>Rig <span>Inventory</span> & Check</h1><div class="topbar__sub">Apparatus tools · riding positions · tool room</div></div>
+    <div class="topbar__right">
+      <div class="house-select"><span class="eyebrow">House</span><select id="houseSel"></select></div>
+      <div class="tourpill" title="Set tour & officer in Setup">👤 <span id="officerName">—</span> · <b id="tourName">—</b></div>
+    </div>
+  </header>
+  <nav class="nav" id="nav"></nav>
+  <main class="main" id="main"></main>
+</div>
+<input type="file" accept="image/*" capture="environment" class="filepick" id="filepick" />
+
+<script>
+/* ============================================================
+   FDNY Apparatus Tool Inventory & Rig Check — single-file app
+   Seed tool lists are SUPPLEMENTAL / illustrative, compiled from
+   PUBLIC descriptions of FDNY engine & ladder riding positions.
+   They are NOT an official FDNY tool assignment table. Replace
+   them with your department's official lists (Setup + manifest).
+   ============================================================ */
+
+/* ---------- guarded key/value store (settings, inventory, checks) ---------- */
+const Store=(()=>{
+  const KEY='fdny_rig_v1';let mem={};let ok=true;
+  try{const t='__t';localStorage.setItem(t,'1');localStorage.removeItem(t);}catch(e){ok=false;}
+  function read(){if(!ok)return mem;try{return JSON.parse(localStorage.getItem(KEY))||{};}catch(e){return {};}}
+  function write(o){if(!ok){mem=o;return;}try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem=o;}}
+  return {get(k,d){const o=read();return k in o?o[k]:d;},set(k,v){const o=read();o[k]=v;write(o);}};
+})();
+
+/* ---------- photo store (IndexedDB, falls back to in-memory) ---------- */
+const IDB=(()=>{
+  let dbP=null,ok=true;const mem=new Map();
+  function open(){if(dbP)return dbP;dbP=new Promise((res,rej)=>{try{const q=indexedDB.open('fdny_rig_photos',1);
+    q.onupgradeneeded=()=>{q.result.createObjectStore('photos',{keyPath:'id'});};
+    q.onsuccess=()=>res(q.result);q.onerror=()=>{ok=false;rej(q.error);};}catch(e){ok=false;rej(e);}});return dbP;}
+  async function put(rec){if(!ok){mem.set(rec.id,rec);return rec;}try{const db=await open();return await new Promise((res,rej)=>{const tx=db.transaction('photos','readwrite');tx.objectStore('photos').put(rec);tx.oncomplete=()=>res(rec);tx.onerror=()=>rej(tx.error);});}catch(e){mem.set(rec.id,rec);return rec;}}
+  async function all(){if(!ok)return [...mem.values()];try{const db=await open();return await new Promise((res,rej)=>{const tx=db.transaction('photos','readonly');const rq=tx.objectStore('photos').getAll();rq.onsuccess=()=>res(rq.result||[]);rq.onerror=()=>rej(rq.error);});}catch(e){return [...mem.values()];}}
+  async function get(id){const list=await all();return list.find(x=>x.id===id)||null;}
+  async function del(id){if(!ok){mem.delete(id);return;}try{const db=await open();return await new Promise((res,rej)=>{const tx=db.transaction('photos','readwrite');tx.objectStore('photos').delete(id);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);});}catch(e){mem.delete(id);}}
+  return {put,all,get,del};
+})();
+
+/* ---------- helpers ---------- */
+const $=(s,el=document)=>el.querySelector(s);
+const $$=(s,el=document)=>[...el.querySelectorAll(s)];
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=(p='id')=>p+'_'+Math.random().toString(36).slice(2,9);
+const nowISO=()=>new Date().toISOString();
+const fmtDate=d=>new Date(d).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+const CAT=[['hose','Hose'],['nozzle','Nozzles/Appliances'],['water','Water supply'],['fe','Forcible entry'],['hand','Hand tools'],['sawpower','Saws/Power'],['ladder','Ladders'],['air','SCBA/Air'],['rope','Ropes'],['ems','EMS'],['salvage','Salvage/Utility'],['apparatus','Apparatus'],['misc','Misc']];
+const catLabel=c=>(CAT.find(x=>x[0]===c)||[,c])[1];
+function icon(n){const p={
+  dashboard:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  check:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3h6v3H9zM8 12l2.5 2.5L15 10"/>',
+  alert:'<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17.5v.5"/>',
+  box:'<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+  rig:'<rect x="1" y="7" width="14" height="9" rx="1"/><path d="M15 10h4l3 3v3h-7z"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>',
+  camera:'<path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/>',
+  sync:'<path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/>',
+  book:'<path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 3v18"/>',
+  note:'<path d="M4 4h16v12l-4 4H4z"/><path d="M16 20v-4h4"/>',
+  trash:'<path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>'};
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p[n]||''}</svg>`;}
+
+/* ---------- seed data (public-sourced, illustrative) ---------- */
+function T(name,qty,location,category,note){return {id:uid('t'),name,qty,location,category,note:note||''};}
+function engineTools(){return [
+  T('Attack line 1¾" (preconnect)',2,'Crosslay / hosebed','hose','Primary handlines'),
+  T('Attack line 2½"',1,'Hosebed','hose','Large-volume / commercial'),
+  T('Supply hose 5" LDH',1,'Hosebed','hose','Hydrant supply'),
+  T('Booster / trash line',1,'Reel','hose','Outside/rubbish fires'),
+  T('Combination nozzle (MST)',2,'Riding: Nozzle','nozzle','Fire attack'),
+  T('Solid-bore / stacked tips',1,'Officer-side compartment','nozzle',''),
+  T('Gated wye',1,'Chauffeur-side compartment','nozzle',''),
+  T('Fittings / reducers / increasers',1,'Chauffeur-side compartment','nozzle','Adapt any hose to any hose'),
+  T('Hydrant wrench',2,'Chauffeur-side tray','water','Hydrant connection'),
+  T('Spanner wrenches (set)',1,'Chauffeur-side tray','water',''),
+  T('Hose straps',3,'Riding: Control','hand',''),
+  T('Door chocks (set)',1,'Riding: Control / Door','hand',''),
+  T('Standpipe / hi-rise kit',1,'Officer-side compartment','water','In-line gauge, fittings, spanners'),
+  T('Forcible entry irons (Halligan + flat-head axe)',1,'Riding: Door','fe','If no truck on scene'),
+  T('6\' NY roof hook',2,'Rear compartment','hand',''),
+  T('Portable radio',5,'Cab / seats','apparatus','One per member'),
+  T('Hand light',5,'Riding positions','apparatus',''),
+  T('SCBA (with facepiece)',5,'Seats','air','One per seat'),
+  T('Spare SCBA cylinder',4,'Compartment','air',''),
+  T('Thermal imaging camera (TIC)',1,'Cab – Officer','apparatus',''),
+  T('Portable extinguisher (dry chem/CO₂)',1,'Compartment','misc',''),
+  T('Water extinguisher 2½ gal',1,'Compartment','misc',''),
+  T('First aid / O₂ / AED kit',1,'Compartment','ems',''),
+  T('Ground ladder (attic/portable)',1,'Side rack','ladder',''),
+  T('Salvage tarps',2,'Compartment','salvage',''),
+  T('Traffic cones / flares',1,'Compartment','salvage',''),
+];}
+function ladderTools(){return [
+  T('Aerial / tower ladder',1,'Apparatus (turntable)','apparatus','Weekly operational check'),
+  T('35\' extension ladder',1,'Ladder rack','ladder',''),
+  T('24\' extension ladder',1,'Ladder rack','ladder',''),
+  T('16\' roof ladder',1,'Ladder rack','ladder',''),
+  T('10\' folding (attic) ladder',1,'Ladder rack','ladder',''),
+  T('Forcible entry irons (Halligan + 8-lb flat-head axe)',1,'Riding: Irons','fe','Inside team'),
+  T('Hydraulic forcible entry tool (Hydra-Ram)',1,'Riding: Irons','fe',''),
+  T('K-tool / through-the-lock kit',1,'Riding: Irons','fe',''),
+  T('Sledgehammer / maul',1,'Riding: Irons','fe',''),
+  T('2½-gal water extinguisher ("the can")',1,'Riding: Can','misc',''),
+  T('6\' NY roof hook',4,'Can / OV / Roof','hand',''),
+  T('Multi-length hooks (6\' & 10\')',2,'Compartment','hand','Higher ceilings'),
+  T('Roof saw (rotary / K-12)',1,'Riding: Roof','sawpower',''),
+  T('Chain saw',1,'Riding: Roof / compartment','sawpower',''),
+  T('Life-saving rope (LSR)',1,'Riding: Roof','rope','Roof/rescue'),
+  T('Search rope',1,'Riding: Officer','rope',''),
+  T('Halligan for OV',1,'Riding: OV','fe',''),
+  T('Portable ladder (little giant/OV)',1,'Riding: OV','ladder',''),
+  T('Bolt cutters',1,'OV / compartment','hand','Window bars/gates'),
+  T('Thermal imaging camera (TIC)',1,'Cab – Officer','apparatus',''),
+  T('Officer\'s tool',1,'Riding: Officer','fe',''),
+  T('Portable radio',6,'Cab / seats','apparatus','One per member'),
+  T('Hand light',6,'Riding positions','apparatus',''),
+  T('SCBA (with facepiece)',6,'Seats','air',''),
+  T('Spare SCBA cylinder',4,'Compartment','air',''),
+  T('PPV fan',1,'Compartment','salvage',''),
+  T('Rescue rope bag',1,'Compartment','rope',''),
+  T('Cribbing set',1,'Compartment','salvage',''),
+  T('First aid / O₂ / AED kit',1,'Compartment','ems',''),
+];}
+const ENGINE_ORDER=['Crosslay / hosebed','Hosebed','Reel','Riding: Nozzle','Riding: Backup','Riding: Control','Riding: Door','Chauffeur-side tray','Chauffeur-side compartment','Officer-side compartment','Rear compartment','Compartment','Cab – Officer','Cab / seats','Riding positions','Seats','Side rack'];
+const LADDER_ORDER=['Apparatus (turntable)','Ladder rack','Riding: Officer','Riding: Irons','Riding: Can','Riding: OV','Riding: Roof','Can / OV / Roof','OV / compartment','Cab – Officer','Cab / seats','Riding positions','Seats','Compartment'];
+
+/* ---------- state bootstrap ---------- */
+function ensureSeed(){
+  if(!Store.get('houses',null)){
+    const h1=uid('h');
+    Store.set('houses',[{id:h1,name:'Sample Firehouse — E### / L###'}]);
+    Store.set('currentHouse',h1);
+    const eng=engineTools(),lad=ladderTools();
+    Store.set('rigs',[
+      {id:uid('r'),houseId:h1,name:'Engine — Sample',type:'engine',tools:eng},
+      {id:uid('r'),houseId:h1,name:'Ladder — Sample',type:'ladder',tools:lad},
+    ]);
+    // tool room seeded from a few spares
+    Store.set('inventory',{[h1]:[
+      {id:uid('i'),name:'Spare SCBA cylinder',qty:8,bin:'Air room',category:'air',condition:'good',min:6,note:''},
+      {id:uid('i'),name:'6\' NY roof hook',qty:5,bin:'Tool room rack A',category:'hand',condition:'good',min:4,note:''},
+      {id:uid('i'),name:'Halligan',qty:3,bin:'Tool room rack A',category:'fe',condition:'good',min:2,note:''},
+      {id:uid('i'),name:'Rotary saw blade (metal)',qty:6,bin:'Tool room shelf 2',category:'sawpower',condition:'good',min:4,note:''},
+      {id:uid('i'),name:'Combination nozzle (spare)',qty:1,bin:'Tool room shelf 3',category:'nozzle',condition:'good',min:1,note:''},
+    ]});
+    Store.set('checks',{});Store.set('history',{});Store.set('discrepancies',[]);Store.set('sync',[]);
+    Store.set('settings',{officer:'',tour:'Day tour',inventoryEndpoint:'',cloudEndpoint:''});
+  }
+}
+ensureSeed();
+const houses=()=>Store.get('houses',[]);
+const currentHouseId=()=>Store.get('currentHouse',houses()[0]&&houses()[0].id);
+const currentHouse=()=>houses().find(h=>h.id===currentHouseId())||houses()[0];
+const rigs=()=>Store.get('rigs',[]).filter(r=>r.houseId===currentHouseId());
+const allRigs=()=>Store.get('rigs',[]);
+const settings=()=>Store.get('settings',{});
+const inventory=()=>{const inv=Store.get('inventory',{});return inv[currentHouseId()]||[];};
+function saveInventory(list){const inv=Store.get('inventory',{});inv[currentHouseId()]=list;Store.set('inventory',inv);}
+const discrepancies=()=>Store.get('discrepancies',[]);
+function saveDiscrepancies(d){Store.set('discrepancies',d);}
+const syncQueue=()=>Store.get('sync',[]);
+function saveSync(q){Store.set('sync',q);}
+function enqueue(kind,summary,payload){const q=syncQueue();q.unshift({id:uid('q'),kind,summary,payload,status:'pending',ts:nowISO()});saveSync(q);}
+
+/* ---------- checks ---------- */
+const checks=()=>Store.get('checks',{});
+function getCheck(rigId){return checks()[rigId]||null;}
+function setCheck(rigId,c){const all=checks();all[rigId]=c;Store.set('checks',all);}
+function rigReadiness(rigId){
+  const c=getCheck(rigId);if(!c||!c.submittedAt)return null;
+  const rig=allRigs().find(r=>r.id===rigId);if(!rig)return null;
+  const total=rig.tools.length;let present=0;rig.tools.forEach(t=>{if((c.items[t.id]||{}).status==='present')present++;});
+  return {pct:total?present/total:0,present,total,missing:rig.tools.filter(t=>(c.items[t.id]||{}).status==='missing').length,
+    damaged:rig.tools.filter(t=>(c.items[t.id]||{}).status==='damaged').length,at:c.submittedAt};
+}
+
+/* ---------- photo capture ---------- */
+function fileToThumb(file,max=1000){return new Promise((res,rej)=>{const r=new FileReader();
+  r.onload=()=>{const img=new Image();img.onload=()=>{const s=Math.min(1,max/Math.max(img.width,img.height));
+    const c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*s));c.height=Math.max(1,Math.round(img.height*s));
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',0.72));};img.onerror=rej;img.src=r.result;};
+  r.onerror=rej;r.readAsDataURL(file);});}
+let _pickCb=null;
+$('#filepick').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];e.target.value='';if(f&&_pickCb){try{const url=await fileToThumb(f);_pickCb(url);}catch(err){_pickCb(null);}}});
+function capturePhoto(cb){_pickCb=cb;$('#filepick').click();}
+async function savePhoto(dataUrl,meta){
+  const rec={id:uid('p'),dataUrl,caption:meta.caption||'',rigId:meta.rigId||null,toolId:meta.toolId||null,discId:meta.discId||null,status:'local',createdAt:nowISO()};
+  await IDB.put(rec);enqueue('photo','Photo: '+(rec.caption||'attachment'),{id:rec.id});return rec;
+}
+
+/* ---------- cloud / inventory adapters (configurable; offline-safe) ---------- */
+async function pushQueueItem(item){
+  const s=settings();
+  const endpoint=item.kind==='photo'?s.cloudEndpoint:s.inventoryEndpoint;
+  if(!endpoint)return {ok:false,reason:'no-endpoint'};
+  try{
+    let body=item.payload;
+    if(item.kind==='photo'){const rec=await IDB.get(item.payload.id);body=rec;}
+    const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:item.kind,data:body})});
+    return {ok:r.ok,reason:r.ok?'':'http-'+r.status};
+  }catch(e){return {ok:false,reason:'network'};}
+}
+async function pushAll(){
+  const q=syncQueue();let sent=0;
+  for(const item of q){if(item.status==='sent')continue;const res=await pushQueueItem(item);
+    if(res.ok){item.status='sent';if(item.kind==='photo'){const rec=await IDB.get(item.payload.id);if(rec){rec.status='uploaded';await IDB.put(rec);}}sent++;}
+    else item.status=res.reason==='no-endpoint'?'pending':'error';}
+  saveSync(q);return sent;
+}
+
+/* ---------- NAV / ROUTER ---------- */
+const VIEWS=[
+  {id:'dashboard',label:'Dashboard',icon:'dashboard',group:'Operations',fn:viewDashboard},
+  {id:'check',label:'Rig Check',icon:'check',group:'Operations',fn:viewCheck},
+  {id:'discrepancies',label:'Discrepancies',icon:'alert',group:'Operations',fn:viewDiscrepancies},
+  {id:'toolroom',label:'Tool Room',icon:'box',group:'Inventory',fn:viewToolRoom},
+  {id:'setup',label:'Rigs & Setup',icon:'rig',group:'Inventory',fn:viewSetup},
+  {id:'photos',label:'Photos & Uploads',icon:'camera',group:'Data',fn:viewPhotos},
+  {id:'sync',label:'Sync & Export',icon:'sync',group:'Data',fn:viewSync},
+  {id:'reference',label:'Reference',icon:'book',group:'Data',fn:viewReference},
+];
+function openDiscCount(){return discrepancies().filter(d=>d.status==='open').length;}
+function renderNav(){
+  const cur=(location.hash||'#dashboard').slice(1).split('/')[0];
+  const groups=[...new Set(VIEWS.map(v=>v.group))];
+  $('#nav').innerHTML=groups.map(g=>`<div class="nav__group"><div class="nav__label">${g}</div>${
+    VIEWS.filter(v=>v.group===g).map(v=>`<a href="#${v.id}" class="${v.id===cur?'on':''}">${icon(v.icon)}<span>${v.label}</span>${
+      v.id==='discrepancies'&&openDiscCount()?`<span class="badge">${openDiscCount()}</span>`:''}</a>`).join('')}</div>`).join('');
+}
+function renderTop(){
+  const hs=houses();
+  $('#houseSel').innerHTML=hs.map(h=>`<option value="${h.id}" ${h.id===currentHouseId()?'selected':''}>${esc(h.name)}</option>`).join('');
+  $('#houseSel').onchange=e=>{Store.set('currentHouse',e.target.value);route();};
+  const s=settings();$('#officerName').textContent=s.officer||'Set officer';$('#tourName').textContent=s.tour||'—';
+}
+function route(){
+  renderTop();renderNav();
+  const id=(location.hash||'#dashboard').slice(1).split('/')[0];
+  const arg=(location.hash||'').split('/')[1];
+  const v=VIEWS.find(x=>x.id===id)||VIEWS[0];
+  $('#main').innerHTML='';v.fn($('#main'),arg);$('#main').scrollTop=0;
+}
+window.addEventListener('hashchange',route);
+
+/* ============================================================
+   VIEWS
+   ============================================================ */
+const seedNotice=`<div class="notice"><span>ⓘ</span><div><b>Supplemental tool lists.</b> The seeded engine/ladder tools are compiled from public descriptions of FDNY riding positions — not an official FDNY inventory table. Edit them in <a href="#setup">Rigs &amp; Setup</a> or import your official lists. Everything is customizable per firehouse.</div></div>`;
+
+function viewDashboard(el){
+  const rl=rigs();
+  const totalTools=rl.reduce((a,r)=>a+r.tools.length,0);
+  const open=discrepancies().filter(d=>d.status==='open');
+  const pendingSync=syncQueue().filter(q=>q.status!=='sent').length;
+  el.innerHTML=`<div class="view">
+    <div class="page-head"><h2>Company Dashboard</h2><p>${esc(currentHouse()?currentHouse().name:'')} — apparatus readiness at a glance. Start a rig check when you come on shift.</p></div>
+    ${seedNotice}
+    <div class="grid g4">
+      <div class="stat" style="--accent:var(--red)"><div class="lbl">Apparatus</div><div class="val">${rl.length}</div><div class="foot">in this house</div></div>
+      <div class="stat" style="--accent:var(--amber)"><div class="lbl">Tools tracked</div><div class="val">${totalTools}</div><div class="foot">across all rigs</div></div>
+      <div class="stat" style="--accent:var(--red)"><div class="lbl">Open discrepancies</div><div class="val">${open.length}</div><div class="foot">${open.length?'need attention':'all clear'}</div></div>
+      <div class="stat" style="--accent:var(--cyan)"><div class="lbl">Pending uploads/sync</div><div class="val">${pendingSync}</div><div class="foot">${settings().cloudEndpoint||settings().inventoryEndpoint?'ready to push':'configure in Sync'}</div></div>
+    </div>
+
+    <div class="section"><div class="section__title"><h3>Apparatus readiness</h3><span class="rule"></span><span class="tag">last completed check</span></div>
+      <div class="grid g2">${rl.map(r=>{const rd=rigReadiness(r.id);const c=getCheck(r.id);
+        const pct=rd?Math.round(rd.pct*100):null;const col=pct===null?'var(--line-strong)':pct>=95?'var(--green)':pct>=80?'var(--amber)':'var(--red)';
+        return `<div class="rig-card"><h4>${esc(r.name)}</h4><div class="sub">${r.type==='engine'?'Engine company':'Ladder company'} · ${r.tools.length} tools</div>
+          ${rd?`<div class="barrow"><div class="progressbar" style="flex:1;margin:0"><i style="width:${pct}%;background:${col}"></i></div><span class="pct" style="color:${col}">${pct}%</span></div>
+            <div style="font-size:12px;color:var(--text-dim)">${rd.present}/${rd.total} present · <span style="color:#ff6b70">${rd.missing} missing</span> · <span style="color:var(--amber)">${rd.damaged} damaged</span></div>
+            <div style="font-size:11px;color:var(--text-faint);font-family:var(--font-mono);margin-top:4px">checked ${fmtDate(rd.at)}${c&&c.officer?' · '+esc(c.officer):''}</div>`
+            :`<div style="font-size:12px;color:var(--text-dim)">${c&&!c.submittedAt?'Check in progress…':'No check on record yet.'}</div>`}
+          <div class="btnrow" style="margin-top:12px"><a class="btn btn--red btn--sm" href="#check/${r.id}">${c&&!c.submittedAt?'Continue check':'Start rig check'} ›</a></div>
+        </div>`;}).join('')||'<div class="empty">No apparatus in this house. Add one in <a href="#setup">Rigs &amp; Setup</a>.</div>'}
+      </div></div>
+
+    <div class="section"><div class="section__title"><h3>Open discrepancies</h3><span class="rule"></span><a class="tag" href="#discrepancies">view all ›</a></div>
+      <div class="panel panel--pad0">${open.length?open.slice(0,6).map(discRow).join(''):'<div class="empty">No open discrepancies. 🎉</div>'}</div>
+    </div>
+  </div>`;
+}
+
+/* ---------- Rig Check ---------- */
+function viewCheck(el,rigId){
+  const rl=rigs();if(!rl.length){el.innerHTML=`<div class="view"><div class="page-head"><h2>Rig Check</h2></div><div class="empty">No apparatus yet. Add one in <a href="#setup">Rigs &amp; Setup</a>.</div></div>`;return;}
+  let rig=rl.find(r=>r.id===rigId)||rl[0];
+  el.innerHTML=`<div class="view">
+    <div class="page-head"><h2>Rig Check</h2><p>Verify each tool is present and in its assigned spot. Tap <b style="color:var(--green)">P</b>resent, <b style="color:#ff6b70">M</b>issing, or <b style="color:var(--amber)">D</b>amaged — add a note or photo on anything that needs it.</p></div>
+    <div class="rigtabs" id="rigtabs">${rl.map(r=>`<div class="rigtab ${r.id===rig.id?'on':''}" data-r="${r.id}"><div><div class="rt-name">${esc(r.name)}</div><div class="rt-type">${r.type}</div></div></div>`).join('')}</div>
+    <div id="checkBody"></div>
+  </div>`;
+  $('#rigtabs',el).onclick=e=>{const t=e.target.closest('.rigtab');if(t){location.hash='#check/'+t.dataset.r;}};
+  drawCheck($('#checkBody',el),rig);
+}
+function currentOrNewCheck(rig){
+  let c=getCheck(rig.id);
+  if(!c||c.submittedAt){c={startedAt:nowISO(),submittedAt:null,officer:settings().officer||'',tour:settings().tour||'',items:{}};setCheck(rig.id,c);}
+  return c;
+}
+function drawCheck(box,rig){
+  const c=currentOrNewCheck(rig);
+  const order=(rig.type==='engine'?ENGINE_ORDER:LADDER_ORDER);
+  const locs=[...new Set(rig.tools.map(t=>t.location))].sort((a,b)=>{const ia=order.indexOf(a),ib=order.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
+  const done=rig.tools.filter(t=>c.items[t.id]&&c.items[t.id].status).length;
+  box.innerHTML=`
+    <div class="btnrow" style="margin-bottom:14px">
+      <button class="btn btn--sm" id="allPresent">✓ Mark all present</button>
+      <button class="btn btn--sm btn--ghost" id="resetCheck">Reset</button>
+      <span style="color:var(--text-faint);font-size:12px;font-family:var(--font-mono)">started ${fmtDate(c.startedAt)}${c.officer?' · '+esc(c.officer):''}</span>
+    </div>
+    ${locs.map(loc=>`<div class="loc-group"><div class="loc-head"><h4>${esc(loc)}</h4><span class="rule"></span></div>
+      ${rig.tools.filter(t=>t.location===loc).map(t=>titemRow(t,c)).join('')}</div>`).join('')}
+    <div class="stickybar"><div class="progressbar"><i id="ckbar" style="width:${done/rig.tools.length*100}%"></i></div>
+      <div class="btnrow" style="justify-content:space-between"><span class="mono" id="ckcount" style="color:var(--text-dim)">${done}/${rig.tools.length} checked</span>
+        <button class="btn btn--red" id="submitCheck">Submit rig check</button></div></div>`;
+  // wire rows
+  wireCheckRows(box,rig);
+  $('#allPresent',box).onclick=()=>{const cc=getCheck(rig.id);rig.tools.forEach(t=>{cc.items[t.id]=cc.items[t.id]||{};if(!cc.items[t.id].status)cc.items[t.id].status='present';});setCheck(rig.id,cc);drawCheck(box,rig);};
+  $('#resetCheck',box).onclick=()=>{setCheck(rig.id,{startedAt:nowISO(),submittedAt:null,officer:settings().officer||'',tour:settings().tour||'',items:{}});drawCheck(box,rig);};
+  $('#submitCheck',box).onclick=()=>submitCheck(rig,box);
+}
+function titemRow(t,c){
+  const st=(c.items[t.id]||{}).status||'';const note=(c.items[t.id]||{}).comment||'';const photos=(c.items[t.id]||{}).photos||[];
+  return `<div class="titem ${note||photos.length?'expanded':''}" data-t="${t.id}">
+    <div class="titem__main"><div class="titem__name">${esc(t.name)}</div>
+      <div class="titem__meta">qty ${t.qty} · ${esc(catLabel(t.category))}</div>
+      <textarea class="titem__note" placeholder="Comment / annotation (e.g., 'blade dull — swap', 'moved to compartment 3')">${esc(note)}</textarea>
+      <div class="thumbs" data-thumbs>${photos.map(p=>`<img class="thumb" data-pid="${p.id}" src="${p.url}" alt="">`).join('')}</div>
+    </div>
+    <div class="statusbtns">
+      <button class="sbtn ${st==='present'?'on-p':''}" data-s="present" title="Present">P</button>
+      <button class="sbtn ${st==='missing'?'on-m':''}" data-s="missing" title="Missing">M</button>
+      <button class="sbtn ${st==='damaged'?'on-d':''}" data-s="damaged" title="Damaged">D</button>
+    </div>
+    <button class="iconbtn" data-act="note" title="Comment">${icon('note')}</button>
+    <button class="iconbtn" data-act="photo" title="Add photo">${icon('camera')}</button>
+  </div>`;
+}
+function wireCheckRows(box,rig){
+  $$('.titem',box).forEach(row=>{
+    const tid=row.dataset.t;
+    $$('.sbtn',row).forEach(b=>b.onclick=()=>{const c=getCheck(rig.id);c.items[tid]=c.items[tid]||{};
+      c.items[tid].status=c.items[tid].status===b.dataset.s?'':b.dataset.s;setCheck(rig.id,c);
+      $$('.sbtn',row).forEach(x=>x.classList.remove('on-p','on-m','on-d'));
+      const s=c.items[tid].status;if(s)b.classList.add(s==='present'?'on-p':s==='missing'?'on-m':'on-d');
+      updateCheckProgress(box,rig);});
+    const note=$('.titem__note',row);
+    $('[data-act=note]',row).onclick=()=>{row.classList.toggle('expanded');if(row.classList.contains('expanded'))note.focus();};
+    note.onchange=()=>{const c=getCheck(rig.id);c.items[tid]=c.items[tid]||{};c.items[tid].comment=note.value;setCheck(rig.id,c);};
+    $('[data-act=photo]',row).onclick=()=>capturePhoto(async url=>{if(!url)return;const rec=await savePhoto(url,{rigId:rig.id,toolId:tid,caption:rig.name+' — '+($('.titem__name',row).textContent)});
+      const c=getCheck(rig.id);c.items[tid]=c.items[tid]||{};c.items[tid].photos=(c.items[tid].photos||[]).concat([{id:rec.id,url}]);setCheck(rig.id,c);
+      row.classList.add('expanded');$('[data-thumbs]',row).insertAdjacentHTML('beforeend',`<img class="thumb" src="${url}" alt="">`);});
+  });
+}
+function updateCheckProgress(box,rig){const c=getCheck(rig.id);const done=rig.tools.filter(t=>c.items[t.id]&&c.items[t.id].status).length;
+  $('#ckbar',box).style.width=done/rig.tools.length*100+'%';$('#ckcount',box).textContent=`${done}/${rig.tools.length} checked`;}
+function submitCheck(rig,box){
+  const c=getCheck(rig.id);c.submittedAt=nowISO();c.officer=settings().officer||c.officer;c.tour=settings().tour||c.tour;setCheck(rig.id,c);
+  // generate discrepancies
+  const d=discrepancies();let created=0;
+  rig.tools.forEach(t=>{const it=c.items[t.id]||{};if(it.status==='missing'||it.status==='damaged'){
+    d.unshift({id:uid('d'),houseId:rig.houseId,rigId:rig.id,rigName:rig.name,toolId:t.id,toolName:t.name,location:t.location,
+      type:it.status,status:'open',comment:it.comment||'',photos:it.photos||[],
+      custody:[{action:'flagged',by:c.officer||'unknown',tour:c.tour||'',ts:nowISO()}],created:nowISO()});created++;}});
+  saveDiscrepancies(d);
+  // history + sync
+  const hist=Store.get('history',{});hist[rig.id]=(hist[rig.id]||[]);const rd=rigReadiness(rig.id);
+  hist[rig.id].unshift({at:c.submittedAt,officer:c.officer,tour:c.tour,pct:rd?rd.pct:0,missing:rd?rd.missing:0,damaged:rd?rd.damaged:0});
+  Store.set('history',hist);
+  enqueue('check',`${rig.name} rig check — ${rd?Math.round(rd.pct*100):0}% (${created} discrepancies)`,{rigId:rig.id,at:c.submittedAt,officer:c.officer,tour:c.tour,items:c.items});
+  box.innerHTML=`<div class="panel" style="text-align:center;padding:30px">
+    <div class="signage" style="font-size:22px;color:${rd&&rd.pct>=.95?'var(--green)':'var(--amber)'}">Rig check submitted</div>
+    <p style="color:var(--text-dim)">${rig.name}: ${rd?rd.present:0}/${rig.tools.length} present · ${created} discrepanc${created===1?'y':'ies'} logged.</p>
+    <div class="btnrow" style="justify-content:center">
+      ${created?'<a class="btn btn--red" href="#discrepancies">Review discrepancies</a>':''}
+      <a class="btn" href="#dashboard">Back to dashboard</a>
+      <button class="btn btn--ghost" id="newCheck">New check</button></div>
+    <p style="color:var(--text-faint);font-size:12px;margin-top:10px">Queued for the inventory/gear system — push it from <a href="#sync">Sync &amp; Export</a>.</p></div>`;
+  $('#newCheck',box).onclick=()=>{setCheck(rig.id,{startedAt:nowISO(),submittedAt:null,officer:settings().officer||'',tour:settings().tour||'',items:{}});drawCheck(box,rig);};
+  renderNav();
+}
+
+/* ---------- Discrepancies ---------- */
+function discRow(d){const col=d.type==='missing'?'var(--red)':d.type==='damaged'?'var(--amber)':'var(--cyan)';
+  return `<div class="disc"><span class="disc__dot" style="background:${d.status==='resolved'?'var(--green)':col}"></span>
+    <div class="disc__body"><div class="disc__t">${esc(d.toolName)} <span class="pill ${d.type==='missing'?'pill--red':d.type==='damaged'?'pill--amber':'pill--cyan'}">${d.type}</span> ${d.status==='resolved'?'<span class="pill pill--green">resolved</span>':''}</div>
+      <div class="disc__meta">${esc(d.rigName||'')} · ${esc(d.location||'')} · flagged ${fmtDate(d.created)}${d.custody&&d.custody[0]?' by '+esc(d.custody[0].by):''}</div>
+      ${d.comment?`<div class="disc__cmt">"${esc(d.comment)}"</div>`:''}
+      ${d.photos&&d.photos.length?`<div class="thumbs">${d.photos.map(p=>`<img class="thumb" src="${p.url}" alt="">`).join('')}</div>`:''}
+    </div>
+    ${d.status==='open'?`<button class="btn btn--sm" data-resolve="${d.id}">Resolve</button>`:''}</div>`;
+}
+function viewDiscrepancies(el){
+  let filter='open';
+  const render=()=>{const list=discrepancies().filter(d=>filter==='all'?true:d.status===filter);
+    $('#discList',el).innerHTML=list.length?list.map(discRow).join(''):'<div class="empty">Nothing here.</div>';
+    $$('[data-resolve]',el).forEach(b=>b.onclick=()=>{const d=discrepancies();const item=d.find(x=>x.id===b.dataset.resolve);
+      if(item){const note=prompt('Resolution note (optional) — e.g., "replaced from tool room", "found in compartment 3":')||'';
+        item.status='resolved';item.custody=(item.custody||[]).concat([{action:'resolved',by:settings().officer||'unknown',tour:settings().tour||'',ts:nowISO(),note}]);
+        saveDiscrepancies(d);enqueue('discrepancy',`Resolved: ${item.toolName}`,{id:item.id,note});render();renderNav();}});
+  };
+  el.innerHTML=`<div class="view"><div class="page-head"><h2>Discrepancies & Chain of Custody</h2>
+    <p>Every missing/damaged item from a rig check lands here with who flagged it, when, and any photos — so differences and custody are documented, not lost on a clipboard.</p></div>
+    <div class="btnrow" style="margin-bottom:14px" id="discFilter">
+      <button class="btn btn--sm btn--red" data-f="open">Open</button>
+      <button class="btn btn--sm btn--ghost" data-f="resolved">Resolved</button>
+      <button class="btn btn--sm btn--ghost" data-f="all">All</button></div>
+    <div class="panel panel--pad0" id="discList"></div></div>`;
+  $('#discFilter',el).onclick=e=>{const b=e.target.closest('[data-f]');if(b){filter=b.dataset.f;$$('#discFilter .btn',el).forEach(x=>x.classList.add('btn--ghost'));b.classList.remove('btn--ghost');render();}};
+  render();
+}
+
+/* ---------- Tool Room ---------- */
+function viewToolRoom(el){
+  el.innerHTML=`<div class="view"><div class="page-head"><h2>Tool Room Inventory</h2>
+    <p>Manage what's stocked in <b style="color:var(--text)">${esc(currentHouse()?currentHouse().name:'')}</b>'s tool room — spares and quantities each house keeps on hand. Fully editable; low stock is flagged.</p></div>
+    ${seedNotice}
+    <div class="btnrow" style="margin-bottom:14px"><input id="invSearch" placeholder="Search tools…" style="max-width:300px"><button class="btn btn--red" id="invAdd">${icon('plus')} Add item</button>
+      <button class="btn btn--ghost" id="invExport">Export CSV</button></div>
+    <div class="panel panel--pad0"><table class="tbl"><thead><tr><th>Tool</th><th>Category</th><th>Bin / location</th><th class="num">Qty</th><th class="num">Min</th><th>Condition</th><th></th></tr></thead>
+      <tbody id="invBody"></tbody></table></div></div>`;
+  const draw=(q='')=>{const list=inventory().filter(i=>!q||i.name.toLowerCase().includes(q)||(i.bin||'').toLowerCase().includes(q));
+    $('#invBody',el).innerHTML=list.map(i=>{const low=i.qty<=(i.min||0);
+      return `<tr data-i="${i.id}"><td><input value="${esc(i.name)}" data-k="name"></td>
+        <td><select data-k="category">${CAT.map(c=>`<option value="${c[0]}" ${c[0]===i.category?'selected':''}>${c[1]}</option>`).join('')}</select></td>
+        <td><input value="${esc(i.bin||'')}" data-k="bin"></td>
+        <td class="num"><input type="number" value="${i.qty}" data-k="qty" style="width:64px;text-align:right;${low?'color:#ff6b70;font-weight:700':''}"></td>
+        <td class="num"><input type="number" value="${i.min||0}" data-k="min" style="width:56px;text-align:right"></td>
+        <td><select data-k="condition">${['good','worn','out of service'].map(c=>`<option ${c===i.condition?'selected':''}>${c}</option>`).join('')}</select> ${low?'<span class="pill pill--red">low</span>':''}</td>
+        <td><button class="iconbtn" data-del="${i.id}">${icon('trash')}</button></td></tr>`;}).join('')||'<tr><td colspan="7"><div class="empty">No items. Add your tool-room stock.</div></td></tr>';
+    $$('#invBody input,#invBody select',el).forEach(inp=>inp.onchange=()=>{const tr=inp.closest('tr');const list=inventory();const it=list.find(x=>x.id===tr.dataset.i);
+      if(it){const k=inp.dataset.k;it[k]=(k==='qty'||k==='min')?(+inp.value||0):inp.value;saveInventory(list);draw($('#invSearch',el).value.toLowerCase());}});
+    $$('[data-del]',el).forEach(b=>b.onclick=()=>{if(confirm('Remove this item?')){saveInventory(inventory().filter(x=>x.id!==b.dataset.del));draw($('#invSearch',el).value.toLowerCase());}});
+  };
+  $('#invSearch',el).oninput=e=>draw(e.target.value.toLowerCase());
+  $('#invAdd',el).onclick=()=>{saveInventory(inventory().concat([{id:uid('i'),name:'New tool',qty:1,bin:'',category:'hand',condition:'good',min:0,note:''}]));draw();};
+  $('#invExport',el).onclick=()=>exportCSV('toolroom_'+(currentHouse()?currentHouse().name:'house'),inventory().map(i=>({name:i.name,category:i.category,bin:i.bin,qty:i.qty,min:i.min,condition:i.condition})));
+  draw();
+}
+
+/* ---------- Rigs & Setup ---------- */
+function viewSetup(el){
+  const s=settings();
+  el.innerHTML=`<div class="view"><div class="page-head"><h2>Rigs & Setup</h2><p>Customize firehouses, apparatus, and their expected tool lists. This is the "what FDNY says should be on the rig" master list each check runs against.</p></div>
+    <div class="section"><div class="section__title"><h3>Shift details</h3><span class="rule"></span></div>
+      <div class="panel grid g3">
+        <label class="fld"><span class="k">Officer on duty</span><input id="setOfficer" value="${esc(s.officer||'')}" placeholder="Lt. / Capt. name"></label>
+        <label class="fld"><span class="k">Tour</span><select id="setTour">${['Day tour','Night tour','24-hour','Mutual'].map(t=>`<option ${t===s.tour?'selected':''}>${t}</option>`).join('')}</select></label>
+        <label class="fld"><span class="k">Current firehouse</span><select id="setHouse">${houses().map(h=>`<option value="${h.id}" ${h.id===currentHouseId()?'selected':''}>${esc(h.name)}</option>`).join('')}</select></label>
+      </div></div>
+
+    <div class="section"><div class="section__title"><h3>Firehouses</h3><span class="rule"></span><button class="btn btn--sm" id="addHouse">${icon('plus')} Add house</button></div>
+      <div class="panel panel--pad0" id="houseList"></div></div>
+
+    <div class="section"><div class="section__title"><h3>Apparatus in ${esc(currentHouse()?currentHouse().name:'')}</h3><span class="rule"></span>
+      <button class="btn btn--sm" id="addRig">${icon('plus')} Add rig</button></div>
+      <div id="rigList"></div></div>
+  </div>`;
+  $('#setOfficer',el).onchange=e=>{const st=settings();st.officer=e.target.value;Store.set('settings',st);renderTop();};
+  $('#setTour',el).onchange=e=>{const st=settings();st.tour=e.target.value;Store.set('settings',st);renderTop();};
+  $('#setHouse',el).onchange=e=>{Store.set('currentHouse',e.target.value);route();};
+  // houses
+  const drawHouses=()=>{$('#houseList',el).innerHTML=houses().map(h=>`<div class="q-item"><input class="qk" value="${esc(h.name)}" data-h="${h.id}">
+    ${houses().length>1?`<button class="iconbtn" data-delh="${h.id}">${icon('trash')}</button>`:'<span class="pill pill--dim">current</span>'}</div>`).join('');
+    $$('[data-h]',el).forEach(i=>i.onchange=()=>{const hs=houses();const h=hs.find(x=>x.id===i.dataset.h);h.name=i.value;Store.set('houses',hs);renderTop();});
+    $$('[data-delh]',el).forEach(b=>b.onclick=()=>{if(confirm('Delete this house and its rigs/inventory?')){Store.set('houses',houses().filter(h=>h.id!==b.dataset.delh));
+      Store.set('rigs',allRigs().filter(r=>r.houseId!==b.dataset.delh));if(currentHouseId()===b.dataset.delh)Store.set('currentHouse',houses()[0].id);route();}});};
+  $('#addHouse',el).onclick=()=>{Store.set('houses',houses().concat([{id:uid('h'),name:'New Firehouse'}]));drawHouses();renderTop();};
+  drawHouses();
+  // rigs
+  drawRigList($('#rigList',el));
+  $('#addRig',el).onclick=()=>{const rs=allRigs();rs.push({id:uid('r'),houseId:currentHouseId(),name:'New Rig',type:'engine',tools:[]});Store.set('rigs',rs);drawRigList($('#rigList',el));};
+}
+function drawRigList(box){
+  box.innerHTML=rigs().map(r=>`<div class="panel" style="margin-bottom:14px" data-rig="${r.id}">
+    <div class="btnrow" style="justify-content:space-between;margin-bottom:10px">
+      <div class="btnrow"><input value="${esc(r.name)}" data-k="name" style="width:200px">
+        <select data-k="type"><option value="engine" ${r.type==='engine'?'selected':''}>Engine</option><option value="ladder" ${r.type==='ladder'?'selected':''}>Ladder</option></select></div>
+      <div class="btnrow"><button class="btn btn--sm" data-addtool="${r.id}">${icon('plus')} Tool</button>
+        <button class="btn btn--sm btn--ghost" data-delrig="${r.id}">Delete rig</button></div></div>
+    <table class="tbl"><thead><tr><th>Tool</th><th>Location / position</th><th>Category</th><th class="num">Qty</th><th></th></tr></thead>
+      <tbody>${r.tools.map(t=>`<tr data-t="${t.id}"><td><input value="${esc(t.name)}" data-tk="name"></td>
+        <td><input value="${esc(t.location)}" data-tk="location"></td>
+        <td><select data-tk="category">${CAT.map(c=>`<option value="${c[0]}" ${c[0]===t.category?'selected':''}>${c[1]}</option>`).join('')}</select></td>
+        <td class="num"><input type="number" value="${t.qty}" data-tk="qty" style="width:60px;text-align:right"></td>
+        <td><button class="iconbtn" data-delt="${t.id}">${icon('trash')}</button></td></tr>`).join('')||'<tr><td colspan="5"><div class="empty" style="padding:16px">No tools — add the expected loadout.</div></td></tr>'}</tbody></table>
+  </div>`).join('')||'<div class="empty">No rigs in this house yet.</div>';
+  // wire
+  $$('[data-rig]',box).forEach(card=>{const rid=card.dataset.rig;
+    $$('[data-k]',card).forEach(inp=>{if(inp.closest('tr'))return;inp.onchange=()=>{const rs=allRigs();const r=rs.find(x=>x.id===rid);r[inp.dataset.k]=inp.value;Store.set('rigs',rs);};});
+    $$('tr[data-t]',card).forEach(tr=>{const tid=tr.dataset.t;$$('[data-tk]',tr).forEach(inp=>inp.onchange=()=>{const rs=allRigs();const r=rs.find(x=>x.id===rid);const t=r.tools.find(x=>x.id===tid);
+      const k=inp.dataset.tk;t[k]=k==='qty'?(+inp.value||0):inp.value;Store.set('rigs',rs);});
+      $('[data-delt]',tr).onclick=()=>{const rs=allRigs();const r=rs.find(x=>x.id===rid);r.tools=r.tools.filter(x=>x.id!==tid);Store.set('rigs',rs);drawRigList(box);};});
+    $('[data-addtool]',card).onclick=()=>{const rs=allRigs();const r=rs.find(x=>x.id===rid);r.tools.push(T('New tool',1,'Compartment','hand',''));Store.set('rigs',rs);drawRigList(box);};
+    $('[data-delrig]',card).onclick=()=>{if(confirm('Delete this rig?')){Store.set('rigs',allRigs().filter(x=>x.id!==rid));drawRigList(box);}};
+  });
+}
+
+/* ---------- Photos & Uploads ---------- */
+function viewPhotos(el){
+  el.innerHTML=`<div class="view"><div class="page-head"><h2>Photos & Uploads</h2>
+    <p>Every photo you attach during a rig check or to a discrepancy is stored here for documentation and chain of custody. Push them to the FDNY cloud once an endpoint is configured in <a href="#sync">Sync</a>.</p></div>
+    <div class="btnrow" style="margin-bottom:14px"><button class="btn btn--red" id="capNew">${icon('camera')} Capture photo</button>
+      <button class="btn" id="pushPhotos">Upload pending</button><span id="photoMsg" style="color:var(--text-dim);font-size:12px"></span></div>
+    <div class="gallery" id="gal"><div class="empty">Loading…</div></div></div>`;
+  const draw=async()=>{const list=(await IDB.all()).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+    $('#gal',el).innerHTML=list.length?list.map(p=>`<div class="gcard"><img src="${p.dataUrl}" alt="">
+      <div class="gmeta"><div class="gcap">${esc(p.caption||'Photo')}</div>
+        <div class="gsub">${fmtDate(p.createdAt)}</div>
+        <div style="margin-top:6px"><span class="pill ${p.status==='uploaded'?'pill--green':p.status==='queued'?'pill--amber':'pill--dim'}">${p.status}</span></div></div></div>`).join('')
+      :'<div class="empty">No photos yet. Attach them from a rig check, or capture one here.</div>';};
+  $('#capNew',el).onclick=()=>capturePhoto(async url=>{if(!url)return;await savePhoto(url,{caption:'Manual capture — '+(currentHouse()?currentHouse().name:'')});draw();renderNav();});
+  $('#pushPhotos',el).onclick=async()=>{$('#photoMsg',el).textContent='Uploading…';const n=await pushAll();
+    $('#photoMsg',el).textContent=settings().cloudEndpoint?`Pushed ${n} item(s).`:'No cloud endpoint set — items remain queued locally (configure in Sync).';draw();};
+  draw();
+}
+
+/* ---------- Sync & Export ---------- */
+function viewSync(el){
+  const s=settings();const q=syncQueue();
+  el.innerHTML=`<div class="view"><div class="page-head"><h2>Sync & Export</h2>
+    <p>Connect this app to your inventory / gear-management system and photo cloud to cut paperwork. Until endpoints are set, everything is captured locally and can be exported. Real FDNY systems are internal — point these at your agency's API/bucket (or a proxy) and the queue will POST to them.</p></div>
+    <div class="notice"><span>ⓘ</span><div>Store <b>endpoints only</b> here, not secrets. Authentication (tokens/keys) should be handled by a backend or proxy you control — a static page can't keep an API key private.</div></div>
+    <div class="grid g2">
+      <div class="panel"><div class="section__title" style="margin-top:0"><h3>Inventory / gear system</h3><span class="rule"></span></div>
+        <label class="fld"><span class="k">POST endpoint (JSON)</span><input id="invEnd" value="${esc(s.inventoryEndpoint||'')}" placeholder="https://your-agency.example/api/rig-checks"></label>
+        <p style="font-size:12px;color:var(--text-faint)">Receives rig checks, discrepancies, and inventory changes as <code>{kind,data}</code>.</p></div>
+      <div class="panel"><div class="section__title" style="margin-top:0"><h3>Photo cloud</h3><span class="rule"></span></div>
+        <label class="fld"><span class="k">POST endpoint (JSON)</span><input id="cloudEnd" value="${esc(s.cloudEndpoint||'')}" placeholder="https://your-agency.example/api/photos"></label>
+        <p style="font-size:12px;color:var(--text-faint)">Receives photos as <code>{kind:'photo',data:{id,dataUrl,caption,…}}</code>.</p></div>
+    </div>
+    <div class="btnrow" style="margin:16px 0"><button class="btn btn--red" id="saveEnd">Save endpoints</button>
+      <button class="btn" id="pushNow">Push queue now</button>
+      <button class="btn btn--ghost" id="expAll">Export all data (JSON)</button>
+      <label class="btn btn--ghost" style="cursor:pointer">Import JSON<input type="file" accept="application/json" id="impFile" style="display:none"></label>
+      <span id="syncMsg" style="color:var(--text-dim);font-size:12px"></span></div>
+    <div class="section"><div class="section__title"><h3>Sync queue</h3><span class="rule"></span><span class="tag">${q.filter(x=>x.status!=='sent').length} pending</span></div>
+      <div class="panel panel--pad0" id="qList"></div></div>
+  </div>`;
+  const drawQ=()=>{const q=syncQueue();$('#qList',el).innerHTML=q.length?q.slice(0,50).map(item=>`<div class="disc"><span class="disc__dot" style="background:${item.status==='sent'?'var(--green)':item.status==='error'?'var(--red)':'var(--amber)'}"></span>
+    <div class="disc__body"><div class="disc__t">${esc(item.summary)}</div><div class="disc__meta">${item.kind} · ${fmtDate(item.ts)}</div></div>
+    <span class="pill ${item.status==='sent'?'pill--green':item.status==='error'?'pill--red':'pill--amber'}">${item.status}</span></div>`).join(''):'<div class="empty">Queue is empty.</div>';};
+  $('#saveEnd',el).onclick=()=>{const st=settings();st.inventoryEndpoint=$('#invEnd',el).value.trim();st.cloudEndpoint=$('#cloudEnd',el).value.trim();Store.set('settings',st);$('#syncMsg',el).textContent='Saved.';};
+  $('#pushNow',el).onclick=async()=>{$('#syncMsg',el).textContent='Pushing…';const n=await pushAll();
+    $('#syncMsg',el).textContent=(settings().inventoryEndpoint||settings().cloudEndpoint)?`Pushed ${n} item(s).`:'No endpoints set — items stay queued. Add endpoints above.';drawQ();renderNav();};
+  $('#expAll',el).onclick=async()=>{const photos=await IDB.all();const dump={exportedAt:nowISO(),houses:houses(),rigs:allRigs(),inventory:Store.get('inventory',{}),
+    checks:Store.get('checks',{}),history:Store.get('history',{}),discrepancies:discrepancies(),settings:settings(),photos};
+    downloadFile('fdny-rig-inventory-export.json','application/json',JSON.stringify(dump,null,2));};
+  $('#impFile',el).onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const txt=await f.text();const d=JSON.parse(txt);
+    if(d.houses)Store.set('houses',d.houses);if(d.rigs)Store.set('rigs',d.rigs);if(d.inventory)Store.set('inventory',d.inventory);
+    if(d.checks)Store.set('checks',d.checks);if(d.history)Store.set('history',d.history);if(d.discrepancies)Store.set('discrepancies',d.discrepancies);
+    if(d.settings)Store.set('settings',d.settings);if(Array.isArray(d.photos))for(const p of d.photos)await IDB.put(p);
+    $('#syncMsg',el).textContent='Imported. Reloading…';setTimeout(()=>route(),400);}catch(err){$('#syncMsg',el).textContent='Import failed: '+err.message;}};
+  drawQ();
+}
+
+/* ---------- Reference ---------- */
+const REFERENCES=[
+  {t:'FDNY riding positions — engine (nozzle/backup/control/door)',s:'Public write-ups of FDNY engine company roles & tools',u:'https://www.fireengineering.com/firefighting/engine-company-riding-positions-and-job-functions/'},
+  {t:'FDNY riding positions — ladder (irons/can/OV/roof)',s:'Public write-up of ladder company positions & tool assignments',u:'https://www.fireengineering.com/fire-apparatus/setting-up-a-new-ladder-company/'},
+  {t:'NYC Fire Code (2022)',s:'Public — the code in force (Local Law 47 of 2022)',u:'https://www.nyc.gov/site/fdny/codes/fire-code/fire-code.page'},
+  {t:'FDNY rules — Title 3 RCNY',s:'Public — Fire Department rules',u:'https://www.nyc.gov/site/fdny/codes/rules/rules.page'},
+];
+function viewReference(el){
+  el.innerHTML=`<div class="view"><div class="page-head"><h2>Reference & Sources</h2>
+    <p>Where the seeded tool lists come from, plus a slot for your official FDNY tool-assignment tables.</p></div>
+    <div class="notice"><span>ⓘ</span><div>Official FDNY tool-assignment tables live in internal publications (Engine/Ladder Company Operations, bulletins) that are <b>not public</b>. Drop your authorized copies into <code>/content</code> and list them in <code>content/manifest.json</code>; when hosted, they'll appear here.</div></div>
+    <div class="panel panel--pad0">${REFERENCES.map(r=>`<div class="disc"><span class="disc__dot" style="background:var(--gold)"></span>
+      <div class="disc__body"><div class="disc__t">${esc(r.t)}</div><div class="disc__meta">${esc(r.s)}</div></div>
+      <a class="btn btn--sm btn--ghost" href="${r.u}" target="_blank" rel="noopener">Open ↗</a></div>`).join('')}
+      <div id="refExtra"></div></div></div>`;
+  loadManifest().then(m=>{if(m&&Array.isArray(m.references)&&m.references.length){
+    $('#refExtra',el).innerHTML=m.references.map(r=>`<div class="disc"><span class="disc__dot" style="background:var(--cyan)"></span>
+      <div class="disc__body"><div class="disc__t">${esc(r.title||'')}</div><div class="disc__meta">${esc(r.note||'loaded from manifest')}</div></div>
+      ${r.file||r.url?`<a class="btn btn--sm btn--ghost" href="${esc(r.file||r.url)}" target="_blank" rel="noopener">Open ↗</a>`:'<span class="pill pill--amber">Add file</span>'}</div>`).join('');}});
+}
+let MANIFEST=null;
+async function loadManifest(){if(MANIFEST!==null)return MANIFEST;try{const r=await fetch('content/manifest.json',{cache:'no-store'});MANIFEST=r.ok?await r.json():{};}catch(e){MANIFEST={};}return MANIFEST;}
+
+/* ---------- export utils ---------- */
+function downloadFile(name,type,content){const blob=new Blob([content],{type});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+function exportCSV(name,rows){if(!rows.length){downloadFile(name+'.csv','text/csv','');return;}
+  const cols=Object.keys(rows[0]);const esc2=v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`;
+  const csv=[cols.join(',')].concat(rows.map(r=>cols.map(c=>esc2(r[c])).join(','))).join('\n');
+  downloadFile(name+'.csv','text/csv',csv);}
+
+/* ---------- boot ---------- */
+renderTop();renderNav();if(!location.hash)location.hash='#dashboard';route();
+</script>
+</body>
+</html>
